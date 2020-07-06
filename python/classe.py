@@ -184,7 +184,7 @@ class Agente:
         else:
             #quero pegar um corpo
             if self.mapa.mapa[self.x][self.y]: #tem que ter um corpo onde estou!
-                if self.getProporcao() >= random.random(): #chance de pegar o corpo
+                if self.getProporcao() < random.random(): #chance de pegar o corpo
                     self.mapa.tirar_corpo(self.x, self.y)
                     self.carregando = True
                 else:
