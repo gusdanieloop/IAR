@@ -57,7 +57,12 @@ class Mapa:
 
     def show_mapa(self):
         for linha in self.mapa:
-            print(*linha)
+            for item in linha:
+                if item:
+                    print(item, end = ' ')
+                else:
+                    print(end=' ')
+            #print(*linha)
             print()
 
     def tirar_corpo(self, x, y):
@@ -133,8 +138,7 @@ class Agente:
     
     def interagir(self):
         self.verificar_corpos_ao_redor()
-        #print(self.getProporcao())
-        if self.getProporcao() >= 0.4:
+        if self.getProporcao() >= 0.35:
             # print("MUITO CORPO")
             if self.carregando:
                 # print("CARREGANDO")
@@ -164,23 +168,37 @@ class Agente:
                 else:
                     # print("moveu")
                     self.mover()
-    
-    def interagir_final(self):
-        self.verificar_corpos_ao_redor()
-        if self.getProporcao() >= 0.1:
-            # print("MUITO CORPO")
-            if self.carregando:
-                # print("CARREGANDO")
-                if not self.mapa.mapa[self.x][self.y]:
-                    # print("deixou o corpo")
-                    # print(f"x = {self.x}, y = {self.y}")
+
+    def interagir2(self):
+        self.verificar2_corpos_ao_redor()
+        if self.carregando:
+            #quero depositar o corpo
+            if not self.mapa.mapa[self.x][self.y]: #nao pode ter corpo onde estou!
+                if self.getProporcao() >= random.random(): #chance de depositar o corpo
                     self.mapa.colocar_corpo(self.x, self.y)
                     self.carregando = False
                 else:
-                    # print("TEM FORMIGA AQUI, mover")
                     self.mover()
+            else: 
+                self.mover()
+        else:
+            #quero pegar um corpo
+            if self.mapa.mapa[self.x][self.y]: #tem que ter um corpo onde estou!
+                if self.getProporcao() >= random.random(): #chance de pegar o corpo
+                    self.mapa.tirar_corpo(self.x, self.y)
+                    self.carregando = True
+                else:
+                    self.mover()  
             else:
-                # print("NAO CARREGANDO, MOVER")
+                self.mover()
+    
+    def interagir_final(self):
+        self.verificar_corpos_ao_redor()
+        if not self.mapa.mapa[self.x][self.y]:
+            if self.getProporcao() >= random.random(): #chance de depositar
+                self.mapa.colocar_corpo(self.x, self.y)
+                self.carregando = False
+            else:
                 self.mover()
         else:
             self.mover()
