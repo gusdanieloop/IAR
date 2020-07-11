@@ -53,7 +53,7 @@ class Mapa:
         for i in range(self.qtd_agentes):
             x = random.randint(0, self.linhas - 1)
             y = random.randint(0, self.colunas - 1)
-            self.agentes.append(Agente(x, y, 1, self))
+            self.agentes.append(Agente(x, y, 3, self))
 
     def show_mapa(self):
         for linha in self.mapa:
