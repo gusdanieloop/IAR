@@ -42,37 +42,40 @@ class Agente:
                 break
 
     def interagir(self):
-        a = self.mapa.getLocal(self.x, self.y)
-        if self.carregando:
-            if not a:
-                rand = random.random()
-                #print(f'chance largar = {self.largar(self.verificar(a))}, {rand}')
-                #print()
-                if self.largar(self.verificar(a)) > random.random():
-                    self.mapa.largar(self.x, self.y, self.carregando)
-                    self.carregando = None
-        else:
-            if a:
-                if self.pegar(self.verificar(a)) >= random.random():
-                    self.carregando = self.mapa.pegar(self.x, self.y)
-        self.mover()
+        while(True):
+            self.mover()
+            a = self.mapa.getLocal(self.x, self.y)
+            if self.carregando:
+                if not a:
+                    if self.largar(self.verificar(a)) > random.random():
+                        self.mapa.largar(self.x, self.y, self.carregando)
+                        self.carregando = None
+                        print('xóia')
+                        break
+            else:
+                if a:
+                    if self.pegar(self.verificar(a)) > random.random():
+                        self.carregando = self.mapa.pegar(self.x, self.y)
+                        print('xóia')
+                        break
     
-    # def verificar(self, dado):
-    #     if not dado:
-    #         dado = self.carregando
-    #     dados_vizinhos = []
-    #     tamanho = 0
-    #     min_x = max(0, self.x - self.visao)
-    #     min_y = max(0, self.y - self.visao)
-    #     max_x = min(self.x + self.visao, self.mapa.linhas - 1)
-    #     max_y = min(self.y + self.visao, self.mapa.colunas - 1)
-    #     for i in range(min_x, max_x+1):
-    #         for j in range(min_y, max_y+1):
-    #             if self.mapa.mapa[i][j] and i != self.x and j != self.y:
-    #                 dados_vizinhos.append(self.mapa.mapa[i][j])
-    #             tamanho+=1
-    #     return self.similaridade(dado, dados_vizinhos, tamanho)
+    def verificar(self, dado):
+        if not dado:
+            dado = self.carregando
+        dados_vizinhos = []
+        tamanho = 0
+        min_x = max(0, self.x - self.visao)
+        min_y = max(0, self.y - self.visao)
+        max_x = min(self.x + self.visao, self.mapa.linhas - 1)
+        max_y = min(self.y + self.visao, self.mapa.colunas - 1)
+        for i in range(min_x, max_x+1):
+            for j in range(min_y, max_y+1):
+                if self.mapa.mapa[i][j] != 0 and i != self.x and j != self.y:
+                    dados_vizinhos.append(self.mapa.mapa[i][j])
+                tamanho+=1
+        return self.similaridade(dado, dados_vizinhos, tamanho-1)
 
+    '''
     def verificar(self, dado):
         if not dado:
             dado = self.carregando
@@ -85,35 +88,29 @@ class Agente:
                 y = self.y + j
                 if((x >= 0 and x < self.mapa.linhas) and y >= 0 and y < self.mapa.colunas and self.mapa.mapa[x][y] != 0 and x != self.x and y != self.y):
                     dados_vizinhos.append(self.mapa.mapa[x][y])
-                    qtd_blocos += 1
+                qtd_blocos += 1
         #self.setProporcao((qtd_corpos-1)/(qtd_blocos))
         #self.setQtd_corpos(qtd_corpos)
         return self.similaridade(dado, dados_vizinhos, qtd_blocos)
 
-    
+    '''  
     def similaridade(self, dado, dados_vizinhos, tamanho):
-        if not tamanho:
-            return 0
         escala = self.mapa.getEscala()
-        #f = sum([(1 - (dado.getDistancia(dv) / self.mapa.getEscala())) for dv in dados_vizinhos]) / tamanho 
-        #print(f'escala = {escala}, tamanho = {tamanho}')
-        #f = sum([(1 - ((dado.getDistancia(dv) / escala))) for dv in dados_vizinhos]) / tamanho
         f = 0
         for dv in dados_vizinhos:
-            #print(f'dado = {dado.getDistancia(dv)}')
-            f+=(1 - ((dado.getDistancia(dv) / escala)))
+            f += max((1 - dado.getDistancia(dv) / escala),0)
         f/=tamanho
-        #print(f'f = {f}')
-        #print(f'vizinhos = {len(dados_vizinhos)}')
-        #print(f'similaridade {f} -- pos {self.x} {self.y}')
-        # self.mapa.showMapa()
-        return max(0, f)
+        return f
 
     def pegar(self, similar):
-        return (self.mapa.k1 / ( self.mapa.k1 + similar))**2
+        if similar <= 1:
+            return 1.0
+        return 1/(similar**2)
 
     def largar(self, similar):
-        return (similar / (self.mapa.k2 + similar))**2
+        if similar >= 1:
+            return 1.0
+        return similar**4
 
     def getCarregando(self):
         return self.carregando
@@ -131,18 +128,16 @@ class Mapa:
         self.mapa = []
         self.tam_mapa = linhas * colunas
         self.escala_dissimilaridade = None
-        self.k1 = None
-        self.k2 = None
 
         self.construirMapa()
         self.preencherMapa()
         self.construirEscalaDissimilaridade()
-        self.construirKs()
         self.construirAgentes(visao)
 
     def construirEscalaDissimilaridade(self):
-        maximo = max(self.conteudo)
-        minimo = min(self.conteudo)
+        maximo = max(self.conteudo[:self.qtd_conteudo])
+        minimo = min(self.conteudo[:self.qtd_conteudo])
+        #print(maximo, minimo)
         media = 0
         for i in range(len(maximo)-1):
             media += ((float(maximo[i].replace(',','.')) - float(minimo[i].replace(',','.')))**2)
@@ -150,12 +145,12 @@ class Mapa:
         media /= 2
         # print(f'media escala: {media}')
         self.escala_dissimilaridade = media 
-        #self.escala_dissimilaridade = random.random()  
-
-    def construirKs(self):
-        self.k1 = random.random()
-        self.k2 = random.random()
-        # print(f'k1: {self.k1} k2: {self.k2}')
+        #self.escala_dissimilaridade = random.random()
+        '''soma = 0.0
+        for item in self.conteudo[:self.qtd_conteudo]:
+            soma += sum(list(map(float, item[:-1])))
+        soma /= (self.qtd_conteudo * 2)'''
+        #self.escala_dissimilaridade = 1.5
  
     def construirMapa(self):
         for i in range(self.linhas):
