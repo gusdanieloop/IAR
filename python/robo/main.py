@@ -113,6 +113,7 @@ class Adjacencia():
         prev = self.bfs([], start, end)
         whereami = end
         road = [whereami]
+        input("Aperte ENTER para continuar")
         self.drawMapa()
         while(whereami != start):
             whereami = prev[whereami]
@@ -121,6 +122,8 @@ class Adjacencia():
         color = GOLD
         for item in road:
             self.caminho(item[0], color)
+        road2 = [x[1] for x in road]
+        return (len(prev), sum(road2))
         #print(f'\n\nroad {road}')
 
     def distance(self, visited):
@@ -157,6 +160,7 @@ class Adjacencia():
 
     def path(self, start, end):
         prev = self.dijkstra(start, end)
+        input("Aperte ENTER para continuar")
         self.drawMapa()
         #print('TODOS OS NÓS PERCORRIDOS DIJKSTRA')
         #print(prev)
@@ -169,6 +173,8 @@ class Adjacencia():
         color = GOLD
         for item in path[::-1]:
             self.caminho(item, color)
+        road = [self.valueCorreto[self.values[x]] for x in path[::-1]]
+        return (len(prev), sum(road))
         #return path[::-1]
 
 
@@ -220,6 +226,7 @@ class Adjacencia():
         prev = self.astar(start, end)
         #print('TODOS OS NÓS PERCORRIDOS A*')
         #print(prev)
+        input("Aperte ENTER para continuar")
         self.drawMapa()
         current = end
         path = [current]
@@ -229,19 +236,25 @@ class Adjacencia():
         color = GOLD
         for item in path[::-1]:
             self.caminho(item, color)
+        road = [self.valueCorreto[self.values[x]] for x in path[::-1]]
+        return (len(prev), sum(road))
 
 
 adj = Adjacencia(mapa_array)
 print('BFS')
-adj.road(start, end)
+bfs = adj.road(start, end)
 input('ENTER para continuar com DIJKSTRA')
 print('DIJKSTRA')
-adj.path(start,end)
+dij = adj.path(start,end)
 input('ENTER para continuar com A*')
 print('A*')
 #adj.astar(start, end)
-adj.pathStar(start,end)
+ast = adj.pathStar(start,end)
 input('ENTER para sair')
 pygame.quit()
+
+print("##### RESULTADOS #####")
+print(f"Qnt. nós visitados -- BFS: {bfs[0]} - Dijkstra: {dij[0]} - A*: {ast[0]}")
+print(f"Custo -- BFS: {bfs[1]} - Dijkstra: {dij[1]} - A*: {ast[1]}")
 # print(cont_dijkstra)
 # print(cont_aStar)
