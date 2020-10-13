@@ -3,6 +3,8 @@ import copy
 import math
 import numpy as np
 import matplotlib.pyplot as plt
+from scipy.constants import k
+import numpy.random as rn
 
 ### 20
 with open('3-SAT-instances/uf20-01.cnf') as f:
@@ -12,7 +14,7 @@ _, _, nvar, nclauses = arq[7].split()
 nvar = int(nvar)
 nclauses = int(nclauses)
 
-current_answer = [(random.randint(0,1) == 0) for i in range(int(nvar))]
+current_answer = [(random.randint(-1,1) == 0) for i in range(int(nvar))]
 clauses = [list(map(int,x.split()[:-1])) for x in arq[8:] if len(x.split()) > 3]
 '''
 print(current_answer)
@@ -23,11 +25,11 @@ print(clauses)
 
 print("#######")
 '''
-it = 1000
+it = 250000
 iterations = 100
 temperature = 100
-min_temperature = 0.1
-cooling = 0.75
+min_temperature = 1
+cooling = 0.85
 
 
 def testClause(clause, answer):
@@ -41,7 +43,7 @@ def percent(nclauses, clauses, answer): #quero maximizar isso aqui
     for clause in clauses:
         if testClause(clause, answer):
             cont += 1
-    return float(cont)/nclauses
+    return cont#float(cont)/nclauses
 
 def neighbour(nvar, current_answer):
     x = random.randint(0, int(nvar)-1)
@@ -54,13 +56,15 @@ def neighbour(nvar, current_answer):
 def random_search(nvar, current_answer, nclauses, clauses, iterations):
     s_out = current_answer
     s_out_FO = percent(nclauses, clauses, s_out)
+    historico = [s_out_FO]
     for i in range(iterations):
         s = neighbour(nvar, s_out)
         s_FO = percent(nclauses, clauses, s)
         if s_FO > s_out_FO:
             s_out = s
             s_out_FO = s_FO
-    return s_out, s_out_FO
+        historico.append(s_out_FO)
+    return s_out, s_out_FO, historico
 
 def simulated_annealing(nvar, current_answer, nclauses, clauses, iterations, temperature, min_temperature, cooling):
     best_answer = current_answer
@@ -70,9 +74,12 @@ def simulated_annealing(nvar, current_answer, nclauses, clauses, iterations, tem
     historico_temp = [temperature]
     historico_percent = [percent_best]
     cont = 0
-    while(temperature > min_temperature and cont < it):
+    #iterationsaux = iterations
+    while(temperature > min_temperature and cont < 2500):
         #print(f'temperatura: {temperature}')
-        for i in range(iterations):
+        #iterations = iterationsaux
+        #while(iterations > 0):
+        for i in range(100):
             neighbour_answer = neighbour(nvar, current_answer)
             #print(current_answer, neighbour_answer)
             percent_neighbour = percent(nclauses, clauses, neighbour_answer)
@@ -85,22 +92,78 @@ def simulated_annealing(nvar, current_answer, nclauses, clauses, iterations, tem
                 if percent_current > percent_best:
                     best_answer = neighbour_answer
                     best_temperature = temperature
-                    percent_best = percent_neighbour
-                    #print(f"X: {besxxt_temperature} Y: {percent_best}")
+                    percent_best = percent_current
+                    #print(f"X: {best_temperature} Y: {percent_best}")
             else:
                 x = random.random()
-                exp = (0 - (percent_neighbour - percent_current)) / temperature
-                if(x < math.exp(exp)):
+                exxp = (0 - abs(percent_neighbour - percent_current)) / (temperature)
+                if(x < math.exp(exxp)):
                     current_answer = neighbour_answer
                     percent_current = percent_neighbour
+                    #print(f"pior X: {temperature} Y: {percent_current}")
+                    #iterations-=1
             #historico.append(current_answer)
-        temperature *= cooling
         historico_temp.append(temperature)
         historico_percent.append(percent_current)
+        temperature *= 0.75
         cont+=1
+    print(f"X: {best_temperature} Y: {percent_best}")
     return best_temperature, percent_best, historico_temp, historico_percent
 
 #print(current_answer, neighbour(nvar, current_answer))
+
+def simulated_annealing2(nvar, current_answer, nclauses, clauses, iterations, temperature, min_temperature, cooling):
+    best_answer = current_answer
+    percent_best = percent(nclauses, clauses, best_answer)
+    best_temperature = temperature
+    #print(f"inicial X: {best_temperature} Y: {percent_best}")
+    historico_temp = []
+    historico_percent = []
+    cont = 0
+    cont_pior = 0
+    cont_pior_aceito = 0
+    #iterationsaux = iterations
+    while(temperature >= min_temperature and cont < 250000):
+        cont_pior = 0
+        cont_pior_aceito = 0
+        #print(f'temperatura: {temperature}')
+        #iterations = iterationsaux
+        #while(iterations > 0):
+        for i in range(100):
+            neighbour_answer = neighbour(nvar, current_answer)
+            #print(current_answer, neighbour_answer)
+            percent_neighbour = percent(nclauses, clauses, neighbour_answer)
+            percent_current = percent(nclauses, clauses, current_answer)
+            delta = percent_neighbour - percent_current
+            #print(f"###percent_neighbour {percent_neighbour} -- percent_current {percent_current} -- {percent_neighbour > percent_current}")
+            if(delta > 0):
+                current_answer = neighbour_answer
+                percent_current = percent_neighbour
+            if(delta < 0):
+                cont_pior+=1
+                x = rn.random()
+                exxp = 15*delta / (temperature) 
+                #print(x, np.exp(exxp))
+                if(x < (np.exp(exxp))):
+                    current_answer = neighbour_answer
+                    percent_current = percent_neighbour
+                    cont_pior_aceito +=1
+            if(percent_neighbour > percent_best):
+                percent_best = percent_neighbour
+                best_answer = neighbour_answer
+                best_temperature = temperature
+                #print(f"X: {best_temperature} Y: {percent_best}")
+            if(percent_neighbour == percent_best):
+                best_temperature = temperature
+        historico_temp.append(temperature)
+        historico_percent.append(percent_current)
+        #print(f'temperatura {temperature} = {cont_pior} -> {cont_pior_aceito}')
+        temperature *= 0.97
+        cont+=1
+    #print(f"final X: {best_temperature} Y: {percent_best}")
+    #print(historico_temp)
+    #print(historico_percent)
+    return best_temperature, percent_best, historico_temp, historico_percent
 
 
 p = []
@@ -108,18 +171,27 @@ prand = []
 a = []
 arand = []
 for i in range(10):
-    best_temperature, best_percent, historico_temp, historico_percent = simulated_annealing(nvar, current_answer, nclauses, clauses, iterations, temperature, min_temperature, cooling)
-    plt.ylabel("Porcentagem de clausulas cumpridas")
-    plt.xlabel("temperatura")
-    plt.plot(historico_temp[:], historico_percent[:])
+    best_temperature, best_percent, historico_temp, historico_percent = simulated_annealing2(nvar, current_answer, nclauses, clauses, iterations, temperature, min_temperature, cooling)
+    plt.ylabel("clausulas cumpridas")
+    plt.xlabel("temperatura")      
+    plt.plot(historico_temp[:], historico_percent[:])#, 'o', color='black')
     melhor_porcentagem = max(historico_percent)
     melhor_temp = historico_temp[historico_percent.index(melhor_porcentagem)]
-    plt.plot(melhor_temp, melhor_porcentagem , 'ro', label='Melhor Resposta')
+    plt.plot(best_temperature, best_percent , 'ro', label='Melhor Resposta')
     plt.legend()
     plt.xlim(plt.xlim()[::-1])
-    plt.savefig(f'plot_uf20_{i+1}')
+    plt.savefig(f'plot_uf20_{i+1}_SA')
     plt.clf()
-    answerrand, percentagerand = random_search(nvar, current_answer, nclauses, clauses, iterations)
+    answerrand, percentagerand, historico = random_search(nvar, current_answer, nclauses, clauses, iterations)
+    plt.ylabel("clausulas cumpridas")
+    plt.xlabel("iterações")
+    plt.plot([i for i in range(len(historico))][:], historico[:])
+    melhor_porcentagem = max(historico)
+    melhor_temp = historico.index(melhor_porcentagem)
+    plt.plot(melhor_temp, melhor_porcentagem , 'ro', label='Melhor Resposta')
+    plt.legend()
+    plt.savefig(f'plot_uf20_{i+1}_RS')
+    plt.clf()
     p.append(best_percent)
     prand.append(percentagerand)
 
@@ -152,8 +224,8 @@ prand = []
 a = []
 arand = []
 for i in range(10):
-    best_temperature, best_percent, historico_temp, historico_percent = simulated_annealing(nvar, current_answer, nclauses, clauses, iterations, temperature, min_temperature, cooling)
-    plt.ylabel("Porcentagem de clausulas cumpridas")
+    best_temperature, best_percent, historico_temp, historico_percent = simulated_annealing2(nvar, current_answer, nclauses, clauses, iterations, temperature, min_temperature, cooling)
+    plt.ylabel("clausulas cumpridas")
     plt.xlabel("temperatura")
     plt.plot(historico_temp[:], historico_percent[:])
     melhor_porcentagem = max(historico_percent)
@@ -161,9 +233,18 @@ for i in range(10):
     plt.plot(melhor_temp, melhor_porcentagem , 'ro', label='Melhor Resposta')
     plt.legend()
     plt.xlim(plt.xlim()[::-1])
-    plt.savefig(f'plot_uf100_{i+1}')
+    plt.savefig(f'plot_uf100_{i+1}_SA')
     plt.clf()
-    answerrand, percentagerand = random_search(nvar, current_answer, nclauses, clauses, iterations)
+    answerrand, percentagerand, historico = random_search(nvar, current_answer, nclauses, clauses, iterations)
+    plt.ylabel("clausulas cumpridas")
+    plt.xlabel("iterações")
+    plt.plot([i for i in range(len(historico))][:], historico[:])
+    melhor_porcentagem = max(historico)
+    melhor_temp = historico.index(melhor_porcentagem)
+    plt.plot(melhor_temp, melhor_porcentagem , 'ro', label='Melhor Resposta')
+    plt.legend()
+    plt.savefig(f'plot_uf100_{i+1}_RS')
+    plt.clf()
     p.append(best_percent)
     prand.append(percentagerand)
 
@@ -190,8 +271,8 @@ prand = []
 a = []
 arand = []
 for i in range(10):
-    best_temperature, best_percent, historico_temp, historico_percent = simulated_annealing(nvar, current_answer, nclauses, clauses, iterations, temperature, min_temperature, cooling)
-    plt.ylabel("Porcentagem de clausulas cumpridas")
+    best_temperature, best_percent, historico_temp, historico_percent = simulated_annealing2(nvar, current_answer, nclauses, clauses, iterations, temperature, min_temperature, cooling)
+    plt.ylabel("clausulas cumpridas")
     plt.xlabel("temperatura")
     plt.plot(historico_temp[:], historico_percent[:])
     melhor_porcentagem = max(historico_percent)
@@ -199,9 +280,18 @@ for i in range(10):
     plt.plot(melhor_temp, melhor_porcentagem , 'ro', label='Melhor Resposta')
     plt.legend()
     plt.xlim(plt.xlim()[::-1])
-    plt.savefig(f'plot_uf250_{i+1}')
+    plt.savefig(f'plot_uf250_{i+1}_SA')
     plt.clf()
-    answerrand, percentagerand = random_search(nvar, current_answer, nclauses, clauses, iterations)
+    answerrand, percentagerand, historico = random_search(nvar, current_answer, nclauses, clauses, iterations)
+    plt.ylabel("clausulas cumpridas")
+    plt.xlabel("iterações")
+    plt.plot([i for i in range(len(historico))][:], historico[:])
+    melhor_porcentagem = max(historico)
+    melhor_temp = historico.index(melhor_porcentagem)
+    plt.plot(melhor_temp, melhor_porcentagem , 'ro', label='Melhor Resposta')
+    plt.legend()
+    plt.savefig(f'plot_uf250_{i+1}_RS')
+    plt.clf()
     p.append(best_percent)
     prand.append(percentagerand)
 
